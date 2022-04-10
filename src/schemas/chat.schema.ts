@@ -20,6 +20,9 @@ export class Chat {
   username: string;
   @Prop()
   date: number;
+  @Prop()
+  usersCount: number;
+  // users virtual
 }
 
 export const ChatSchema = SchemaFactory.createForClass(Chat);

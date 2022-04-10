@@ -8,6 +8,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { AppLoggerMiddleware } from './core/app.logger.middleware';
 import { MongooseModule } from '@nestjs/mongoose';
 import { TelegramModule } from './telegram/telegram.module';
+import { DataModule } from './data/data.module';
 
 @Module({
   imports: [
@@ -27,7 +28,8 @@ import { TelegramModule } from './telegram/telegram.module';
       }),
       AuthModule,
       ScheduleModule.forRoot(),
-      TelegramModule
+      TelegramModule,
+      DataModule
   ],
   providers: [
     {provide: APP_FILTER, useClass: ExceptionsFilter}

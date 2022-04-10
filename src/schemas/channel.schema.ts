@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
+import mongoose, { Document } from 'mongoose';
+import { Chat } from './chat.schema';
 export type ChannelDocument = Channel & Document;
 
 @Schema()
@@ -24,6 +25,12 @@ export class Channel {
   linkedChatId: string;
   @Prop()
   location: string;
+  @Prop()
+  about: string;
+  @Prop()
+  scanDate: Date;
+  @Prop([{ type: mongoose.Schema.Types.ObjectId, ref: 'Chat' }])
+  chats: Chat[];
 }
 
 export const ChannelSchema = SchemaFactory.createForClass(Channel);

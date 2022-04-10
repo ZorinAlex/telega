@@ -4,9 +4,6 @@ import { Api, TelegramClient } from 'telegram';
 import { Session, SessionDocument } from '../schemas/session.schema';
 import { InjectModel, Prop } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Channel, ChannelDocument } from '../schemas/channel.schema';
-import { User, UserDocument } from '../schemas/user.schema';
-import { Chat, ChatDocument } from '../schemas/chat.schema';
 import { ConfigService } from '@nestjs/config';
 const input = require("input");
 import * as _ from 'lodash';
@@ -19,18 +16,10 @@ export class TelegramService {
 
   constructor(
     @InjectModel(Session.name) private sessionModel: Model<SessionDocument>,
-    @InjectModel(Channel.name) private channelModel: Model<ChannelDocument>,
-    @InjectModel(Chat.name) private chatModel: Model<ChatDocument>,
-    @InjectModel(User.name) private userModel: Model<UserDocument>,
     private configService: ConfigService
   ){
     (async ()=>{
       await this.auth();
-      //await this.getChannelData('voenacher');
-      await this.getUsersFromChat("voenacher")
-      //await this.getUserAvatar('5101912316')
-      //let res = await this.getUserPhotos('435962850')
-      // console.log(res.users[0].id.toString());
     })()
   }
 
@@ -51,6 +40,10 @@ export class TelegramService {
   }
 
   async startClient(){
+    const stringSession = new StringSession("");
+    this.client = new TelegramClient(stringSession, Number(this.configService.get('telegram').apiId), this.configService.get('telegram').apiHash, {
+      connectionRetries: 5,
+    });
     await this.client.start({
       phoneNumber: async () => await input.text("Please enter your number: "),
       password: async () => await input.text("Please enter your password: "),
@@ -75,44 +68,19 @@ export class TelegramService {
     }, phone);
   }
 
-  async getChannelData(channel: string, save: boolean = false){
-    const result = await this.client.invoke(
+  async getChannelData(channel: string){
+    try {
+      return await this.client.invoke(
         new Api.channels.GetFullChannel({
-            channel: channel,
+          channel: channel,
         })
-    );
-    if(save){
-      await new this.channelModel({
-        blocked: result.fullChat['blocked'],
-        id: result.fullChat['id'].toString(),
-        participantsCount: result.fullChat['participantsCount'],
-        adminsCount: result.fullChat['adminsCount'],
-        kickedCount: result.fullChat['kickedCount'],
-        bannedCount: result.fullChat['bannedCount'],
-        onlineCount: result.fullChat['onlineCount'],
-        migratedFromChatId: _.isNil(result.fullChat['migratedFromChatId'])?null:result.fullChat['migratedFromChatId'].toString(),
-        linkedChatId: _.isNil(result.fullChat['linkedChatId'])?null: result.fullChat['linkedChatId'].toString(),
-        location: result.fullChat['location'],
-      }).save();
-      if(result.chats.length>0){
-        _.forEach(result.chats, (chat)=>{
-          new this.chatModel({
-            channelId: result.fullChat['id'].toString(),
-            id: chat.id.toString(),
-            username: chat.username,
-            verified: chat.verified,
-            hasLink: chat.hasLink,
-            hasGeo: chat.hasGeo,
-            title: chat.title,
-            date: chat.date
-          }).save();
-        })
-      }
+      );
+    }catch (e) {
+      return e.message
     }
-    return result
   }
 
-  async getUsersFromChat(chat: string, save: boolean = false){
+  async getUsersFromChat(chat: string){
     try {
       let users :Array<UserInfo> = [];
       let offset: number = 0;
@@ -120,27 +88,12 @@ export class TelegramService {
       result = await this.getChatUsersParams(100, offset, chat);
       users.push(...result.users);
       offset+=100;
-      for(let i = 0; i<Math.floor((736 - 100) / 100)+1;i++){
+      for(let i = 0; i<Math.floor((Number(result.count) - 100) / 100)+1;i++){
         result = await this.getChatUsersParams(100, offset, chat);
         users.push(...result.users);
         offset+=100;
       }
-      if(save){
-        for(let i = 0; i < users.length-1; i++){
-          //let avatar = this.getUserBase64Photo(users[i]['id'].toString());
-          await new this.userModel({
-            bot: users[i]['bot'],
-            verified: users[i]['verified'],
-            fake: users[i]['fake'],
-            id: users[i]['id'].toString(),
-            firstName: users[i]['firstName'],
-            lastName: users[i]['lastName'],
-            username: users[i]['username'],
-            phone: users[i]['phone'],
-            avatar: null,
-          }).save()
-        }
-      }
+      return users
     }catch (e) {
       return e.message
     }
@@ -210,5 +163,32 @@ export class TelegramService {
     );
   }
 
+  async getChatMessages(chat: string){
+    const result = await this.client.invoke(
+      new Api.messages.GetHistory({
+        peer: "pnvcomment",
+        offsetId: 0,
+        offsetDate: 0,
+        addOffset: 0,
+        limit: 10,
+        maxId: 0,
+        minId: 0,
+        // @ts-ignore
+        hash: 0,
+      })
+    );
+  }
 
+  async getUsersNearby(coordinates: Array<number>){
+    const result = await this.client.invoke(
+        new Api.contacts.GetLocated({
+            geoPoint: new Api.InputGeoPoint({
+                lat: 49.881885305228366,
+                long: 28.56640119324312,
+                accuracyRadius: 50,
+            }),
+            selfExpires: 43,
+        })
+    );
+  }
 }
