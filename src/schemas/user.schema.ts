@@ -31,8 +31,6 @@ export class User {
   photos: Photo[];
   @Prop([{ type: mongoose.Schema.Types.ObjectId, ref: 'Chat' }])
   chats: Chat[];
-  @Prop({ type: mongoose.Schema.Types.ObjectId})
-  chatMongoId;
   @Prop([{ type: mongoose.Schema.Types.ObjectId, ref: 'UserChatMessages' }])
   userChatMessages: UserChatMessages[];
 }

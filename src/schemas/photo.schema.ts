@@ -5,9 +5,7 @@ export type PhotoDocument = Photo & Document;
 @Schema()
 export class Photo {
   @Prop({ type: mongoose.Schema.Types.ObjectId })
-  userId;
-  @Prop()
-  channelId: string;
+  userMongoId;
   @Prop()
   id: string;
   @Prop()

@@ -9,9 +9,9 @@ export class Message {
   @Prop()
   message: string;
   @Prop()
-  id: string
+  id: string;
   @Prop()
-  fromId: string
+  fromId: string;
   @Prop()
   date: number
 }

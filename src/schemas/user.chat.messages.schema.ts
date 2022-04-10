@@ -6,7 +6,10 @@ export type UserChatMessagesDocument = UserChatMessages & Document;
 export class UserChatMessages {
   @Prop()
   messagesCount: number;
-
+  @Prop({default: 0})
+  savedMessagesCount: number;
+  @Prop({ type: mongoose.Schema.Types.ObjectId})
+  chatMongoId;
   //virtual messages
 }
 

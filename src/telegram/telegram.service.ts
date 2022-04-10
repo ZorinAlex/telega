@@ -163,14 +163,14 @@ export class TelegramService {
     );
   }
 
-  async getChatMessages(chat: string){
-    const result = await this.client.invoke(
+  async getChatMessages(chat: string, limit:number, offset:number){
+    return await this.client.invoke(
       new Api.messages.GetHistory({
-        peer: "pnvcomment",
+        peer: chat,
         offsetId: 0,
         offsetDate: 0,
-        addOffset: 0,
-        limit: 10,
+        addOffset: offset,
+        limit: limit,
         maxId: 0,
         minId: 0,
         // @ts-ignore
