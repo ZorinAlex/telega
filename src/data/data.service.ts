@@ -6,7 +6,7 @@ import { User, UserDocument } from '../schemas/user.schema';
 import { UserChatMessages, UserChatMessagesDocument } from '../schemas/user.chat.messages.schema';
 import { Message, MessageDocument } from '../schemas/message.schema';
 import { Photo, PhotoDocument } from '../schemas/photo.schema';
-import mongoose, { Model } from 'mongoose';
+import mongoose, { Model, Schema } from 'mongoose';
 import { TelegramService } from '../telegram/telegram.service';
 import * as _ from 'lodash';
 import { Api } from 'telegram';
@@ -25,6 +25,7 @@ export class DataService {
     private telegramService: TelegramService
   ){
     setTimeout(()=>{
+      //this.scanChatUsers('pnvcomment')
       this.getChatMessages('pnvcomment');
     }, 2000)
 
@@ -99,6 +100,7 @@ export class DataService {
         }
       }
     }
+    console.log("CHAT USERS PROCESSED")
   }
 
   async addUser(user, userChat){
@@ -140,7 +142,7 @@ export class DataService {
   }
 
   async getChatMessages(chat: string){
-    let offset = 0;
+    let offset = 0;//274200
     const chatMessagesData: messages.ChannelMessages = await this.telegramService.getChatMessages(chat, 100, offset) as messages.ChannelMessages;
     const chatObj = await this.chatModel.findOne({username: chat}).exec();
     await this.processMessages(chatMessagesData.messages, chatObj._id);
@@ -173,11 +175,11 @@ export class DataService {
           if(user.userChatMessages.length === 0){
             chatMessages = await this.createChatMessages(chatMongoId, user);
           }else{
-            chatMessages = _.find(user.userChatMessages, (chatMessages)=> chatMessages.chatMongoId === chatMongoId);
+            chatMessages = _.find(user.userChatMessages, (chatMes)=> chatMes.chatMongoId.equals(chatMongoId));
             if(_.isNil(chatMessages)){
               chatMessages = await this.createChatMessages(chatMongoId, user);
             }else{
-              chatMessages = chatMessages.messagesCount+=1;
+              chatMessages.messagesCount+=1;
               await chatMessages.save()
             }
           }
