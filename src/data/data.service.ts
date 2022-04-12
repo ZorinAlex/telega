@@ -10,12 +10,16 @@ import mongoose, { Model } from 'mongoose';
 import { TelegramService } from '../telegram/telegram.service';
 import * as _ from 'lodash';
 import { Api } from 'telegram';
+import { EScannerState } from './enums/scanner.state.enum';
 import messages = Api.messages;
 import TypeMessage = Api.TypeMessage;
 
 @Injectable()
 export class DataService {
   private usersCache: Map<string, UserDocument> = new Map();
+  private chatsQueue: Array<string> = [];
+  private scannerState: EScannerState = EScannerState.FREE;
+
   constructor(
     @InjectModel(Channel.name) private channelModel: Model<ChannelDocument>,
     @InjectModel(Chat.name) private chatModel: Model<ChatDocument>,
@@ -31,6 +35,31 @@ export class DataService {
 
   }
 
+  addChats(chats: Array<string>){
+    this.chatsQueue.push(...chats);
+    this.startScan();
+  }
+
+  private startScan(fromStop: boolean = false){
+    if(fromStop){
+      const channelName: string = this.chatsQueue.shift();
+      this.fullChatScan(channelName);
+    }else{
+      if(this.scannerState === EScannerState.BUSY) return;
+      this.scannerState = EScannerState.BUSY;
+      const channelName: string = this.chatsQueue.shift();
+      this.fullChatScan(channelName);
+    }
+  }
+
+  private stopScan(){
+    if(this.chatsQueue.length>0){
+      this.startScan(true)
+    }else{
+      this.scannerState = EScannerState.FREE;
+    }
+  }
+
   async fullChatScan(channel: string){
     const channelData = await this.scanChannel(channel);
     if(!_.isNil(channelData) && !_.isNil(channelData.chats)){
@@ -42,6 +71,7 @@ export class DataService {
     }else{
       console.log('CHANNEL NO DATA: ', channelData);
     }
+    this.stopScan();
   }
 
   async scanChannel(channel: string){
