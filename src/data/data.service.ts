@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { InjectModel, Prop } from '@nestjs/mongoose';
+import { InjectModel } from '@nestjs/mongoose';
 import { Channel, ChannelDocument } from '../schemas/channel.schema';
 import { Chat, ChatDocument } from '../schemas/chat.schema';
 import { User, UserDocument } from '../schemas/user.schema';
 import { UserChatMessages, UserChatMessagesDocument } from '../schemas/user.chat.messages.schema';
 import { Message, MessageDocument } from '../schemas/message.schema';
 import { Photo, PhotoDocument } from '../schemas/photo.schema';
-import mongoose, { Model, Schema } from 'mongoose';
+import mongoose, { Model } from 'mongoose';
 import { TelegramService } from '../telegram/telegram.service';
 import * as _ from 'lodash';
 import { Api } from 'telegram';
@@ -25,9 +25,9 @@ export class DataService {
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     private telegramService: TelegramService
   ){
-    setTimeout(async()=>{
-      //this.fullChatScan('npo_dvina')
-    }, 2000)
+    // setTimeout(async()=>{
+    //   this.fullChatScan('absatzmedia')
+    // }, 2000)
 
   }
 
@@ -56,7 +56,8 @@ export class DataService {
             chats.push(chat['_id']);
           }
         }
-        let newChannel = await new this.channelModel({
+        await new this.channelModel({
+          name: channel,
           blocked: channelData.fullChat['blocked'],
           id: channelData.fullChat['id'].toString(),
           participantsCount: channelData.fullChat['participantsCount'],
@@ -71,9 +72,8 @@ export class DataService {
           scanDate: new Date(),
           chats: chats
         }).save();
-        // @ts-ignore
-        newChannel.chats = chats;
-        return newChannel
+        const savedChannel = await this.channelModel.findOne({id: channelData.fullChat.id.toString()}).populate('chats').exec();
+        return savedChannel
       }else{
         //TODO add chats if have some difference
         return channel

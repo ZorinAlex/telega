@@ -6,6 +6,8 @@ export type ChannelDocument = Channel & Document;
 @Schema()
 export class Channel {
   @Prop()
+  name: string;
+  @Prop()
   blocked: boolean;
   @Prop()
   id: string;
