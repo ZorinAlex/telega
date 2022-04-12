@@ -10,6 +10,7 @@ import * as _ from 'lodash';
 import BigInteger = require('big-integer');
 import UserInfo = Api.help.UserInfo;
 import btoa from 'btoa'
+import InputPeerChannel = Api.InputPeerChannel;
 
 @Injectable()
 export class TelegramService {
@@ -99,6 +100,25 @@ export class TelegramService {
     }
   }
 
+  async getUsersFromChatByPeer(chatId: string, accessHash: string){
+    try {
+      let users :Array<UserInfo> = [];
+      let offset: number = 0;
+      let result;
+      result = await this.getChatUsersParamsByPeer(100, offset, chatId, accessHash);
+      users.push(...result.users);
+      offset+=100;
+      for(let i = 0; i<Math.floor((Number(result.count) - 100) / 100)+1;i++){
+        result = await this.getChatUsersParamsByPeer(100, offset, chatId, accessHash);
+        users.push(...result.users);
+        offset+=100;
+      }
+      return users
+    }catch (e) {
+      return e.message
+    }
+  }
+
   private  toBase64(arr) {
     arr = new Uint8Array(arr);
     return btoa(
@@ -163,10 +183,40 @@ export class TelegramService {
     );
   }
 
+  private async getChatUsersParamsByPeer(limit: number, offset:number, chatId: string, accessHash: string){
+    return  await this.client.invoke(
+      new Api.channels.GetParticipants({
+        channel: new InputPeerChannel({channelId: BigInteger(chatId), accessHash: BigInteger(accessHash)}),
+        // @ts-ignore
+        filter: new Api.ChannelParticipantsRecent({}),
+        offset: offset,
+        limit: limit,
+        // @ts-ignore
+        hash: 0,
+      })
+    );
+  }
+
   async getChatMessages(chat: string, limit:number, offset:number){
     return await this.client.invoke(
       new Api.messages.GetHistory({
         peer: chat,
+        offsetId: 0,
+        offsetDate: 0,
+        addOffset: offset,
+        limit: limit,
+        maxId: 0,
+        minId: 0,
+        // @ts-ignore
+        hash: 0,
+      })
+    );
+  }
+
+  async getChatMessagesByPeer(chatId: string, accessHash: string, limit:number, offset:number){
+    return await this.client.invoke(
+      new Api.messages.GetHistory({
+        peer: new InputPeerChannel({channelId: BigInteger(chatId), accessHash: BigInteger(accessHash)}),
         offsetId: 0,
         offsetDate: 0,
         addOffset: offset,

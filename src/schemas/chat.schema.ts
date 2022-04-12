@@ -9,6 +9,8 @@ export class Chat {
   @Prop()
   id: string;
   @Prop()
+  accessHash: string;
+  @Prop()
   verified: boolean;
   @Prop()
   hasLink: boolean;
