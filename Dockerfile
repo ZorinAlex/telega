@@ -1,22 +1,15 @@
-FROM node:16-alpine3.15 AS scratch
-ENV PATH="${PATH}:/usr/src/app/node_modules/.bin:/usr/local/lib/node_modules/.bin"
-WORKDIR /usr/src/app
+FROM node:15.4 as build
 
+WORKDIR /app
 
-FROM scratch as builder
+COPY package*.json ./
 
-COPY package.json ./
-RUN yarn install --frozen-lockfile
+RUN npm install
 
-COPY . .
+COPY dist ./dist/
+COPY scaleData ./scaleData/
+COPY .production.env ./
 
-RUN yarn build
-
-FROM scratch
 EXPOSE 3000
-
-COPY --from=BUILDER --chown=node:node /usr/src/app/node_modules ./node_modules
-COPY --from=BUILDER --chown=node:node /usr/src/app/dist .
-COPY --from=BUILDER --chown=node:node /usr/src/app/package.json .
-
-CMD [ "node", "main.js" ]
+ENV NODE_ENV=production
+CMD ["node", "dist/main.js"]
