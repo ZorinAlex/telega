@@ -7,7 +7,6 @@ COPY package*.json ./
 RUN npm install
 
 COPY dist ./dist/
-COPY scaleData ./scaleData/
 COPY .production.env ./
 
 EXPOSE 3000
