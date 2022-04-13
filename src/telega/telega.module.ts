@@ -1,18 +1,17 @@
 import { Module } from '@nestjs/common';
-import { DataService } from './data.service';
-import { TelegramModule } from '../telegram/telegram.module';
+import { TelegaService } from './telega.service';
+import { TelegaController } from './telega.controller';
 import { MongooseModule } from '@nestjs/mongoose';
-import { Session, SessionSchema } from '../schemas/session.schema';
 import { Channel, ChannelSchema } from '../schemas/channel.schema';
 import { Chat, ChatSchema } from '../schemas/chat.schema';
 import { User, UserSchema } from '../schemas/user.schema';
-import { UserChatMessages, UserChatMessagesSchema } from '../schemas/user.chat.messages.schema';
 import { Message, MessageSchema } from '../schemas/message.schema';
 import { Photo, PhotoSchema } from '../schemas/photo.schema';
+import { UserChatMessages, UserChatMessagesSchema } from '../schemas/user.chat.messages.schema';
+import { DataModule } from '../data/data.module';
 
 @Module({
   imports:[
-    TelegramModule,
     MongooseModule.forFeature([
       { name: Channel.name, schema: ChannelSchema },
       { name: Chat.name, schema: ChatSchema },
@@ -21,8 +20,9 @@ import { Photo, PhotoSchema } from '../schemas/photo.schema';
       { name: Photo.name, schema: PhotoSchema },
       { name: UserChatMessages.name, schema: UserChatMessagesSchema }
     ]),
+    DataModule
   ],
-  providers: [DataService],
-  exports: [DataService]
+  providers: [TelegaService],
+  controllers: [TelegaController]
 })
-export class DataModule {}
+export class TelegaModule {}

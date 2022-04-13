@@ -2,9 +2,7 @@ import {IsNotEmpty} from "class-validator";
 
 export default class LoginDto {
     @IsNotEmpty()
-    walletAddress: string;
+    login: string;
     @IsNotEmpty()
-    signature: string;
-    @IsNotEmpty()
-    message: string
+    password: string;
 }

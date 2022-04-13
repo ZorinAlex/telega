@@ -7,7 +7,8 @@ export const  appConfig = () => ({
     },
     auth: {
         secret: process.env.JWT_AUTH_SECRET,
-        signOptions: { expiresIn: process.env.JWT_AUTH_EXPIRES }
+        signOptions: { expiresIn: process.env.JWT_AUTH_EXPIRES },
+        salt: process.env.SALT
     },
     telegram: {
         apiId: process.env.T_API_ID,

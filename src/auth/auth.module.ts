@@ -4,6 +4,8 @@ import { AuthService } from './auth.service';
 import {JwtModule} from "@nestjs/jwt";
 import {ConfigModule, ConfigService} from "@nestjs/config";
 import {JwtStrategy} from "./auth.jwt.strategy";
+import { MongooseModule } from '@nestjs/mongoose';
+import { Editor, EditorSchema } from '../schemas/editor.schema';
 
 @Module({
   imports: [
@@ -14,6 +16,9 @@ import {JwtStrategy} from "./auth.jwt.strategy";
         },
         inject: [ConfigService]
       }),
+      MongooseModule.forFeature([
+        { name: Editor.name, schema: EditorSchema }
+      ]),
       ConfigModule
   ],
   controllers: [AuthController],

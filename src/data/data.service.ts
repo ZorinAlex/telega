@@ -13,6 +13,7 @@ import { Api } from 'telegram';
 import { EScannerState } from './enums/scanner.state.enum';
 import messages = Api.messages;
 import TypeMessage = Api.TypeMessage;
+const ConsoleProgressBar = require('console-progress-bar');
 
 @Injectable()
 export class DataService {
@@ -28,12 +29,7 @@ export class DataService {
     @InjectModel(UserChatMessages.name) private userChatMessagesModel: Model<UserChatMessagesDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     private telegramService: TelegramService
-  ){
-    // setTimeout(async()=>{
-    //   this.fullChatScan('absatzmedia')
-    // }, 2000)
-
-  }
+  ){}
 
   addChats(chats: Array<string>){
     this.chatsQueue.push(...chats);
@@ -63,7 +59,7 @@ export class DataService {
   async fullChatScan(channel: string){
     const channelData = await this.scanChannel(channel);
     if(!_.isNil(channelData) && !_.isNil(channelData.chats)){
-      console.log('CHANNEL DATA SCANNED: ', channelData.chats);
+      console.log('CHANNEL DATA SCANNED, CHATS FOUND: ', channelData.chats.length);
       for(let i = 0; i<channelData.chats.length; i++){
         await this.scanChatUsers(channelData.chats[i].id, channelData.chats[i].accessHash);
         await this.getChatMessages(channelData.chats[i].id, channelData.chats[i].accessHash);
@@ -102,8 +98,7 @@ export class DataService {
           scanDate: new Date(),
           chats: chats
         }).save();
-        const savedChannel = await this.channelModel.findOne({id: channelData.fullChat.id.toString()}).populate('chats').exec();
-        return savedChannel
+        return await this.channelModel.findOne({id: channelData.fullChat.id.toString()}).populate('chats').exec();
       }else{
         //TODO add chats if have some difference
         return channel
@@ -136,15 +131,17 @@ export class DataService {
     const users: Array<User> = await this.telegramService.getUsersFromChatByPeer(chatId, accessHash);
     const userChat = await this.chatModel.findOne({id: chatId});
     userChat.usersCount = users.length;
-    console.log('USERS COUNT: ', users.length);
+    console.log('USERS SCAN: ', users.length);
+    const consoleProgressBar = new ConsoleProgressBar({ maxValue: users.length-1 });
     await userChat.save();
     if(_.isArray(users)){
-      for(let i = 0; i < users.length-1; i++){
+      for(let i = 0; i < users.length; i++){
         const oldUser = await this.userModel.findOne({id: users[i].id.toString()}).exec();
         if(_.isNil(oldUser)){
           await this.addUser(users[i], userChat);
           //TODO check and  move to sheduler cause its long process to add photos
         }
+        consoleProgressBar.addValue(1);
       }
     }
     console.log("CHAT USERS PROCESSED")
@@ -196,13 +193,14 @@ export class DataService {
     await this.processMessages(chatMessagesData.messages, chatObj._id);
     const count: number = Number(chatMessagesData.count);
     console.log('MESSAGES TOTAL:', count);
+    const consoleProgressBar = new ConsoleProgressBar({ maxValue: Math.floor((count-100)/100)+1 });
     for(let i = 0; i<Math.floor((count-100)/100)+1; i++){
       offset+=100;
       const chatMessagesData: messages.ChannelMessages = await this.telegramService.getChatMessagesByPeer(chatId, accessHash, 100, offset) as messages.ChannelMessages;
       await this.processMessages(chatMessagesData.messages, chatObj._id);
-      console.log('MESSAGES PROCESSED:', offset)
+      consoleProgressBar.addValue(1);
     }
-    console.log('MESSAGES DONE');
+    console.log('MESSAGES SCAN DONE');
     await this.saveUserMessagesData(chatObj._id);
     console.log('MESSAGES DATA SAVED')
   }
