@@ -59,6 +59,7 @@ export class DataService {
   async fullChatScan(channel: string){
     const channelData = await this.scanChannel(channel);
     if(!_.isNil(channelData) && !_.isNil(channelData.chats)){
+      console.log('CHANNEL SCAN FOR: ', channel);
       console.log('CHANNEL DATA SCANNED, CHATS FOUND: ', channelData.chats.length);
       for(let i = 0; i<channelData.chats.length; i++){
         await this.scanChatUsers(channelData.chats[i].id, channelData.chats[i].accessHash);
@@ -70,8 +71,8 @@ export class DataService {
     this.stopScan();
   }
 
-  async scanChannel(channel: string){
-    const channelData = await this.telegramService.getChannelData(channel);
+  async scanChannel(channelName: string){
+    const channelData = await this.telegramService.getChannelData(channelName);
     if(_.has(channelData, 'fullChat')){
       const channel = await this.channelModel.findOne({id: channelData.fullChat.id.toString()}).populate('chats').exec();
       if(_.isNil(channel)){
@@ -83,7 +84,7 @@ export class DataService {
           }
         }
         await new this.channelModel({
-          name: channel,
+          name: channelName,
           blocked: channelData.fullChat['blocked'],
           id: channelData.fullChat['id'].toString(),
           participantsCount: channelData.fullChat['participantsCount'],
