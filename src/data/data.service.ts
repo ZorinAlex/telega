@@ -20,6 +20,7 @@ export class DataService {
   private usersCache: Map<string, UserDocument> = new Map();
   private chatsQueue: Array<string> = [];
   private scannerState: EScannerState = EScannerState.FREE;
+  private useUsersCache: boolean = false;
 
   constructor(
     @InjectModel(Channel.name) private channelModel: Model<ChannelDocument>,
@@ -101,7 +102,6 @@ export class DataService {
         }).save();
         return await this.channelModel.findOne({id: channelData.fullChat.id.toString()}).populate('chats').exec();
       }else{
-        //TODO add chats if have some difference
         return channel
       }
     }else{
@@ -140,7 +140,9 @@ export class DataService {
         const oldUser = await this.userModel.findOne({id: users[i].id.toString()}).exec();
         if(_.isNil(oldUser)){
           await this.addUser(users[i], userChat);
-          //TODO check and  move to sheduler cause its long process to add photos
+        }else{
+          oldUser.chats.push(userChat._id);
+          await oldUser.save()
         }
         consoleProgressBar.addValue(1);
       }
@@ -187,12 +189,14 @@ export class DataService {
   }
 
   async getChatMessages(chatId: string, accessHash: string){
-    this.usersCache.clear();
+    if (this.useUsersCache) this.usersCache.clear();
     let offset = 0;
     const chatMessagesData: messages.ChannelMessages = await this.telegramService.getChatMessagesByPeer(chatId, accessHash,100, offset) as messages.ChannelMessages;
     const chatObj = await this.chatModel.findOne({id: chatId}).exec();
     await this.processMessages(chatMessagesData.messages, chatObj._id);
     const count: number = Number(chatMessagesData.count);
+    chatObj.messagesCount = count;
+    await chatObj.save();
     console.log('MESSAGES TOTAL:', count);
     const consoleProgressBar = new ConsoleProgressBar({ maxValue: Math.floor((count-100)/100)+1 });
     for(let i = 0; i<Math.floor((count-100)/100)+1; i++){
@@ -202,7 +206,7 @@ export class DataService {
       consoleProgressBar.addValue(1);
     }
     console.log('MESSAGES SCAN DONE');
-    await this.saveUserMessagesData(chatObj._id);
+    if (this.useUsersCache) await this.saveUserMessagesData(chatObj._id);
     console.log('MESSAGES DATA SAVED')
   }
 
@@ -222,7 +226,7 @@ export class DataService {
       chatMongoId
     }).save();
     user.userChatMessages.push(chatMessages);
-    //await user.save();
+    if (!this.useUsersCache) await user.save();
     return chatMessages;
   }
 
@@ -231,11 +235,11 @@ export class DataService {
       const message: TypeMessage = messages[i];
       if(_.has(message, 'fromId.userId')){
         let user;
-        if(this.usersCache.has(message['fromId'].userId.toString())){
+        if(this.usersCache && this.usersCache.has(message['fromId'].userId.toString())){
           user = this.usersCache.get(message['fromId'].userId.toString())
         }else{
           user = await this.userModel.findOne({id: message['fromId'].userId.toString()}).populate('userChatMessages').exec();
-          if(!_.isNil(user)){
+          if(this.usersCache && !_.isNil(user)){
             this.usersCache.set(message['fromId'].userId.toString(), user)
           }
         }
@@ -249,7 +253,7 @@ export class DataService {
               chatMessages = await this.createChatMessages(chatMongoId, user);
             }else{
               chatMessages.messagesCount+=1;
-              //await chatMessages.save()
+              if (! this.useUsersCache)await chatMessages.save()
             }
           }
           if(chatMessages.savedMessagesCount<50){
@@ -261,8 +265,8 @@ export class DataService {
   }
 
   async addMessage(message: TypeMessage, userChatMessages: UserChatMessagesDocument){
-    //const oldMessage = await this.messageModel.findOne({id: message.id.toString()});
-    //if(_.isNil(oldMessage)){
+    const oldMessage = await this.messageModel.findOne({id: message.id.toString()});
+    if(_.isNil(oldMessage)){
       await new  this.messageModel({
         UserChatMessagesMongoId: userChatMessages._id,
         message: message['message'],
@@ -271,8 +275,7 @@ export class DataService {
         date: message['date']
       }).save();
       userChatMessages.savedMessagesCount += 1;
-      //await userChatMessages.save();
-      //console.log(userChatMessages.savedMessagesCount);
-    //}
+      if (! this.useUsersCache) await userChatMessages.save();
+    }
   }
 }

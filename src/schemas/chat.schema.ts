@@ -24,6 +24,8 @@ export class Chat {
   date: number;
   @Prop()
   usersCount: number;
+  @Prop()
+  messagesCount: number;
   // users virtual
 }
 
