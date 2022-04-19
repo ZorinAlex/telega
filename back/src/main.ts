@@ -6,7 +6,7 @@ import {ConfigService} from "@nestjs/config";
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
   const app = await NestFactory.create(AppModule, {cors: true});
-  const version = '1.0.0';
+  const version = '1.0.1';
   
   app.useGlobalPipes(new ValidationPipe());
   const configService = app.get(ConfigService);

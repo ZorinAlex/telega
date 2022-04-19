@@ -30,7 +30,12 @@ export class DataService {
     @InjectModel(UserChatMessages.name) private userChatMessagesModel: Model<UserChatMessagesDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     private telegramService: TelegramService
-  ){}
+  ){
+    setTimeout(()=>{
+      this.addChats(['ostashkonews'])
+    },2000)
+
+  }
 
   addChats(chats: Array<string>){
     this.chatsQueue.push(...chats);
@@ -141,8 +146,11 @@ export class DataService {
         if(_.isNil(oldUser)){
           await this.addUser(users[i], userChat);
         }else{
-          oldUser.chats.push(userChat._id);
-          await oldUser.save()
+          const chatIndex: number = _.findIndex(oldUser.chats, (chat)=> chat.equals(userChat._id));
+          if(chatIndex<0){
+            oldUser.chats.push(userChat._id);
+            await oldUser.save()
+          }
         }
         consoleProgressBar.addValue(1);
       }
