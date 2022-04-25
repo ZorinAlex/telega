@@ -1,6 +1,12 @@
 <template>
   <v-app>
-    <v-navigation-drawer app dark bottom clipped>
+    <v-navigation-drawer
+      app
+      dark
+      clipped
+      permanent
+      :mini-variant="mini"
+    >
       <v-list
         flat
       >
@@ -61,9 +67,28 @@ export default {
         { title: 'Про цю штуку', icon: 'mdi-home-variant', link: '/' },
         { title: 'Канали', icon: 'mdi-television-classic', link: 'channels' },
         { title: 'Користувачі', icon: 'mdi-emoticon-poop', link: 'users' },
+        { title: 'Мапа', icon: 'mdi-map', link: 'map' },
       ],
       right: null,
     };
+  },
+  computed: {
+    mini() {
+      switch (this.$vuetify.breakpoint.name) {
+        case 'xs':
+          return true;
+        case 'sm':
+          return true;
+        case 'md':
+          return true;
+        case 'lg':
+          return false;
+        case 'xl':
+          return false;
+        default:
+          return false;
+      }
+    },
   },
 };
 </script>
