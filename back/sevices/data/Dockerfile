@@ -9,6 +9,6 @@ RUN npm install
 COPY dist ./dist/
 COPY .production.env ./
 
-EXPOSE 3000
+EXPOSE 5000
 ENV NODE_ENV=production
 CMD ["node", "dist/main.js"]
