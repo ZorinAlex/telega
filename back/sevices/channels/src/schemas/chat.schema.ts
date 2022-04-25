@@ -2,7 +2,9 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
 export type ChatDocument = Chat & Document;
 
-@Schema()
+@Schema({
+  toJSON: { virtuals: true }
+})
 export class Chat {
   @Prop()
   channelId: string;
@@ -26,7 +28,12 @@ export class Chat {
   usersCount: number;
   @Prop()
   messagesCount: number;
-  // users virtual
 }
 
-export const ChatSchema = SchemaFactory.createForClass(Chat);
+const ChatSchema = SchemaFactory.createForClass(Chat);
+ChatSchema.virtual('userchatmessages', {
+  ref: 'UserChatMessages',
+  localField: '_id',
+  foreignField: 'chatMongoId'
+});
+export {ChatSchema}

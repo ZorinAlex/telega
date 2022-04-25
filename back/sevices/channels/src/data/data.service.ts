@@ -30,16 +30,12 @@ export class DataService {
     @InjectModel(UserChatMessages.name) private userChatMessagesModel: Model<UserChatMessagesDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     private telegramService: TelegramService
-  ){
-    setTimeout(()=>{
-      this.addChats(['ostashkonews'])
-    },2000)
-
-  }
+  ){}
 
   addChats(chats: Array<string>){
     this.chatsQueue.push(...chats);
     this.startScan();
+    return this.chatsQueue;
   }
 
   private startScan(fromStop: boolean = false){
@@ -230,6 +226,7 @@ export class DataService {
 
   private async createChatMessages(chatMongoId, user){
     const chatMessages = await new this.userChatMessagesModel({
+      userMongoId: user._id,
       messagesCount: 1,
       chatMongoId
     }).save();
@@ -243,11 +240,11 @@ export class DataService {
       const message: TypeMessage = messages[i];
       if(_.has(message, 'fromId.userId')){
         let user;
-        if(this.usersCache && this.usersCache.has(message['fromId'].userId.toString())){
+        if(this.useUsersCache && this.usersCache.has(message['fromId'].userId.toString())){
           user = this.usersCache.get(message['fromId'].userId.toString())
         }else{
           user = await this.userModel.findOne({id: message['fromId'].userId.toString()}).populate('userChatMessages').exec();
-          if(this.usersCache && !_.isNil(user)){
+          if(this.useUsersCache && !_.isNil(user)){
             this.usersCache.set(message['fromId'].userId.toString(), user)
           }
         }
@@ -261,7 +258,7 @@ export class DataService {
               chatMessages = await this.createChatMessages(chatMongoId, user);
             }else{
               chatMessages.messagesCount+=1;
-              if (! this.useUsersCache)await chatMessages.save()
+              if (!this.useUsersCache)await chatMessages.save()
             }
           }
           if(chatMessages.savedMessagesCount<50){
@@ -283,7 +280,7 @@ export class DataService {
         date: message['date']
       }).save();
       userChatMessages.savedMessagesCount += 1;
-      if (! this.useUsersCache) await userChatMessages.save();
+      if (!this.useUsersCache) await userChatMessages.save();
     }
   }
 }
