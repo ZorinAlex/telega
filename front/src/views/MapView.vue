@@ -66,36 +66,36 @@ export default {
       const minMax = this.getMinMax();
       const start = { lat: minMax.minLat, lng: minMax.minLng };
       const latDiff = this.getCoordsByDistanceAndDirection(start, 4000, 0).lat - start.lat;
-      const lngDiff = this.getCoordsByDistanceAndDirection(start, 4000, Math.PI / 2).lng - start.lng;
+      const lngDiff = this.getCoordsByDistanceAndDirection(start, 4000, Math.PI / 2).lng
+        - start.lng;
       let latStep = 0;
       let lngStep = 0;
       let isFillRow = true;
       // eslint-disable-next-line no-plusplus
-      while (start.lng + lngStep * lngDiff < minMax.maxLng+lngDiff) {
+      while (start.lng + lngStep * lngDiff < minMax.maxLng + lngDiff) {
         const coords = { lat: start.lat + latStep * latDiff, lng: start.lng + lngStep * lngDiff };
         this.addCircle(coords);
         latStep += 1;
-        if (start.lat + latStep * latDiff > minMax.maxLat+latDiff) {
-          if(isFillRow){
+        if (start.lat + latStep * latDiff > minMax.maxLat + latDiff) {
+          if (isFillRow) {
             isFillRow = false;
             latStep = 0.5;
             lngStep += 0.5;
-          }else{
+          } else {
             isFillRow = true;
             latStep = 0;
             lngStep += 0.5;
           }
-
         }
       }
     },
     getMinMax() {
       return {
-        minLat: _.minBy(this.rectangle.bounds, (coords)=> coords.lat).lat,
-        minLng: _.minBy(this.rectangle.bounds, (coords)=> coords.lng).lng,
-        maxLat: _.maxBy(this.rectangle.bounds, (coords)=> coords.lat).lat,
-        maxLng: _.maxBy(this.rectangle.bounds, (coords)=> coords.lng).lng,
-      }
+        minLat: _.minBy(this.rectangle.bounds, (coords) => coords.lat).lat,
+        minLng: _.minBy(this.rectangle.bounds, (coords) => coords.lng).lng,
+        maxLat: _.maxBy(this.rectangle.bounds, (coords) => coords.lat).lat,
+        maxLng: _.maxBy(this.rectangle.bounds, (coords) => coords.lng).lng,
+      };
     },
     addCircle(coords) {
       this.circles.push({ latlng: coords, radius: 2000, color: '#ff00ff' });

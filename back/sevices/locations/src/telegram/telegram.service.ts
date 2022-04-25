@@ -23,11 +23,11 @@ export class TelegramService {
       await this.auth();
     })()
   }
-
+  protected serviceName: string = 'location';
   protected client: TelegramClient;
 
   async auth(){
-    const sessions: Array<SessionDocument> = await this.sessionModel.find().exec();
+    const sessions: Array<SessionDocument> = await this.sessionModel.find({service: this.serviceName}).exec();
     if (sessions.length>0) {
       const session: SessionDocument = sessions[0];
       const stringSession = new StringSession(session.session);
@@ -54,19 +54,8 @@ export class TelegramService {
     });
     console.log("You should now be connected.");
     const session = this.client.session.save();
-    new this.sessionModel({session}).save();
-  }
-
-  async sendCode(phone: string){
-    const stringSession = new StringSession("");
-    this.client = new TelegramClient(stringSession, Number(this.configService.get('telegram').apiId), this.configService.get('telegram').apiHash, {
-      connectionRetries: 5,
-    });
-    await this.client.connect();
-    await this.client.sendCode({
-      apiId:Number(this.configService.get('telegram').apiId),
-      apiHash:this.configService.get('telegram').apiHash
-    }, phone);
+    const DBSession = {session: session, service: this.serviceName};
+    new this.sessionModel(DBSession).save();
   }
 
   async getChannelData(channel: string){
