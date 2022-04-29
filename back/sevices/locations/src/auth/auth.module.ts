@@ -16,7 +16,7 @@ import { Editor, EditorSchema } from '../schemas/editor.schema';
       }),
       MongooseModule.forFeature([
         { name: Editor.name, schema: EditorSchema }
-      ]),
+      ], 'telega'),
       ConfigModule
   ],
   providers: [

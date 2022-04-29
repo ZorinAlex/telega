@@ -8,6 +8,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { AppLoggerMiddleware } from './core/app.logger.middleware';
 import { MongooseModule } from '@nestjs/mongoose';
 import { TelegramModule } from './telegram/telegram.module';
+import { LocationModule } from './location/location.module';
 
 @Module({
   imports: [
@@ -17,9 +18,20 @@ import { TelegramModule } from './telegram/telegram.module';
         load: [appConfig]
       }),
       MongooseModule.forRootAsync({
+        connectionName: 'telega',
         imports: [ConfigModule],
         useFactory: async (config: ConfigService) => ({
-          uri: `mongodb+srv://${config.get('database').username}:${config.get('database').password}@cluster0.b28ht.mongodb.net/${config.get('database').database}?retryWrites=true&w=majority`,
+          uri: `mongodb+srv://${config.get('database_telega').username}:${config.get('database_telega').password}@${config.get('database_telega').cluster}/${config.get('database_telega').database}?retryWrites=true&w=majority`,
+          useNewUrlParser: true,
+          useUnifiedTopology: true
+        }),
+        inject: [ConfigService],
+      }),
+      MongooseModule.forRootAsync({
+        connectionName: 'locations',
+        imports: [ConfigModule],
+        useFactory: async (config: ConfigService) => ({
+          uri: `mongodb+srv://${config.get('database_locations').username}:${config.get('database_locations').password}@${config.get('database_locations').cluster}/${config.get('database_locations').database}?retryWrites=true&w=majority`,
           useNewUrlParser: true,
           useUnifiedTopology: true,
         }),
@@ -27,7 +39,8 @@ import { TelegramModule } from './telegram/telegram.module';
       }),
       AuthModule,
       ScheduleModule.forRoot(),
-      TelegramModule
+      TelegramModule,
+      LocationModule
   ],
   providers: [
     {provide: APP_FILTER, useClass: ExceptionsFilter}

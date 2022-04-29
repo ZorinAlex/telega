@@ -1,9 +1,16 @@
 export const  appConfig = () => ({
     port: Number(process.env.PORT),
-    database:{
+    database_telega:{
         username: process.env.DB_USER,
         password: process.env.DB_PASSWORD,
-        database: process.env.DB_DATABASE
+        database: process.env.DB_DATABASE,
+        cluster:  process.env.DB_CLUSTER
+    },
+    database_locations:{
+        username: process.env.DB_LOC_USER,
+        password: process.env.DB_LOC_PASSWORD,
+        database: process.env.DB_LOC_DATABASE,
+        cluster:  process.env.DB_LOC_CLUSTER
     },
     auth: {
         secret: process.env.JWT_AUTH_SECRET,

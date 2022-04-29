@@ -8,7 +8,7 @@ import { ConfigModule } from '@nestjs/config';
   imports:[
     MongooseModule.forFeature([
       { name: Session.name, schema: SessionSchema }
-    ]),
+    ], 'telega'),
     ConfigModule
   ],
   providers: [TelegramService],
