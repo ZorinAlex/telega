@@ -11,14 +11,15 @@ import { TelegramService } from '../telegram/telegram.service';
 import * as _ from 'lodash';
 import { Api } from 'telegram';
 import { EScannerState } from './enums/scanner.state.enum';
+import { EChannelScanStatus } from '../misc/enums/region.scan.status.enum';
 import messages = Api.messages;
 import TypeMessage = Api.TypeMessage;
+
 const ConsoleProgressBar = require('console-progress-bar');
 
 @Injectable()
 export class DataService {
   private usersCache: Map<string, UserDocument> = new Map();
-  private chatsQueue: Array<string> = [];
   private scannerState: EScannerState = EScannerState.FREE;
   private useUsersCache: boolean = false;
 
@@ -30,36 +31,55 @@ export class DataService {
     @InjectModel(UserChatMessages.name) private userChatMessagesModel: Model<UserChatMessagesDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     private telegramService: TelegramService
-  ){}
-
-  addChats(chats: Array<string>){
-    this.chatsQueue.push(...chats);
-    this.startScan();
-    return this.chatsQueue;
+  ){
+    (()=>{
+      setTimeout(()=>{
+        this.startScan();
+      }, 2000)
+    })();
   }
 
-  private startScan(fromStop: boolean = false){
-    if(fromStop){
-      const channelName: string = this.chatsQueue.shift();
-      this.fullChatScan(channelName);
-    }else{
-      if(this.scannerState === EScannerState.BUSY) return;
-      this.scannerState = EScannerState.BUSY;
-      const channelName: string = this.chatsQueue.shift();
-      this.fullChatScan(channelName);
+  async addChannels(channels: Array<string>){
+    let scannedChats = [];
+    let chatsToScan = [];
+    for(let i = 0; i< channels.length; i++){
+      const isNewChat = await this.checkChannel(channels[i]);
+      if(isNewChat){
+        chatsToScan.push(channels[i]);
+        await this.saveChannel(channels[i]);
+      }else{
+        scannedChats.push(channels[i]);
+      }
     }
+    this.startScan();
+    return {scannedChats, chatsToScan}
   }
 
-  private stopScan(){
-    if(this.chatsQueue.length>0){
-      this.startScan(true)
-    }else{
+  async checkChannel(channelName: string): Promise<boolean>{
+    const oldChannel = await this.channelModel.findOne({name: channelName}).exec();
+    return _.isNil(oldChannel);
+  }
+
+  private async startScan(){
+    let scanChannel = await this.channelModel.findOne({status: EChannelScanStatus.ACTIVE}).exec();
+    if(_.isNil(scanChannel)){
+      scanChannel = await this.channelModel.findOne({status: EChannelScanStatus.SCHEDULED}).exec();
+      if(!_.isNil(scanChannel)){
+        scanChannel.status = EChannelScanStatus.ACTIVE;
+        await scanChannel.save();
+      }
+    }
+    if(_.isNil(scanChannel)){
       this.scannerState = EScannerState.FREE;
+      console.log('ALL CHANNELS SCANNED')
+    }else{
+      this.scannerState = EScannerState.BUSY;
+      this.fullChatScan(scanChannel.name);
     }
   }
 
   async fullChatScan(channel: string){
-    const channelData = await this.scanChannel(channel);
+    const channelData = await this.channelModel.findOne({name: channel}).populate('chats').exec();
     if(!_.isNil(channelData) && !_.isNil(channelData.chats)){
       console.log('CHANNEL SCAN FOR: ', channel);
       console.log('CHANNEL DATA SCANNED, CHATS FOUND: ', channelData.chats.length);
@@ -70,43 +90,37 @@ export class DataService {
     }else{
       console.log('CHANNEL NO DATA: ', channelData);
     }
-    this.stopScan();
+    channelData.status = EChannelScanStatus.DONE;
+    await channelData.save();
+    this.startScan();
   }
 
-  async scanChannel(channelName: string){
+  async saveChannel(channelName: string){
     const channelData = await this.telegramService.getChannelData(channelName);
-    if(_.has(channelData, 'fullChat')){
-      const channel = await this.channelModel.findOne({id: channelData.fullChat.id.toString()}).populate('chats').exec();
-      if(_.isNil(channel)){
-        let chats: Array<mongoose.Schema.Types.ObjectId> = [];
-        if(channelData.chats.length>0){
-          for(let i = 0; i< channelData.chats.length; i++){
-            let chat = await this.addChat(channelData.chats[i], channelData.fullChat['id'].toString());
-            chats.push(chat['_id']);
-          }
+    if(_.has(channelData, 'fullChat')) {
+      let chats: Array<mongoose.Schema.Types.ObjectId> = [];
+      if (channelData.chats.length > 0) {
+        for (let i = 0; i < channelData.chats.length; i++) {
+          let chat = await this.addChat(channelData.chats[i], channelData.fullChat['id'].toString());
+          chats.push(chat['_id']);
         }
-        await new this.channelModel({
-          name: channelName,
-          blocked: channelData.fullChat['blocked'],
-          id: channelData.fullChat['id'].toString(),
-          participantsCount: channelData.fullChat['participantsCount'],
-          adminsCount: channelData.fullChat['adminsCount'],
-          kickedCount: channelData.fullChat['kickedCount'],
-          bannedCount: channelData.fullChat['bannedCount'],
-          onlineCount: channelData.fullChat['onlineCount'],
-          migratedFromChatId: _.isNil(channelData.fullChat['migratedFromChatId'])?null:channelData.fullChat['migratedFromChatId'].toString(),
-          linkedChatId: _.isNil(channelData.fullChat['linkedChatId'])?null: channelData.fullChat['linkedChatId'].toString(),
-          location: channelData.fullChat['location'],
-          about: channelData.fullChat['about'],
-          scanDate: new Date(),
-          chats: chats
-        }).save();
-        return await this.channelModel.findOne({id: channelData.fullChat.id.toString()}).populate('chats').exec();
-      }else{
-        return channel
       }
-    }else{
-      return channelData
+      await new this.channelModel({
+        name: channelName,
+        blocked: channelData.fullChat['blocked'],
+        id: channelData.fullChat['id'].toString(),
+        participantsCount: channelData.fullChat['participantsCount'],
+        adminsCount: channelData.fullChat['adminsCount'],
+        kickedCount: channelData.fullChat['kickedCount'],
+        bannedCount: channelData.fullChat['bannedCount'],
+        onlineCount: channelData.fullChat['onlineCount'],
+        migratedFromChatId: _.isNil(channelData.fullChat['migratedFromChatId']) ? null : channelData.fullChat['migratedFromChatId'].toString(),
+        linkedChatId: _.isNil(channelData.fullChat['linkedChatId']) ? null : channelData.fullChat['linkedChatId'].toString(),
+        location: channelData.fullChat['location'],
+        about: channelData.fullChat['about'],
+        scanDate: new Date(),
+        chats: chats
+      }).save();
     }
   }
 

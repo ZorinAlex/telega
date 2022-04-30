@@ -12,6 +12,6 @@ export class DataController {
   @Post('channels')
   @HttpCode(HttpStatus.OK)
   async addChannelsToScan(@Body() addChannelsDto: AddChannelsDto){
-    return this.dataService.addChats(addChannelsDto.channels);
+    return this.dataService.addChannels(addChannelsDto.channels);
   }
 }

@@ -1,6 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import mongoose, { Document } from 'mongoose';
 import { Chat } from './chat.schema';
+import { EChannelScanStatus } from '../misc/enums/region.scan.status.enum';
 export type ChannelDocument = Channel & Document;
 
 @Schema()
@@ -31,6 +32,8 @@ export class Channel {
   about: string;
   @Prop()
   scanDate: Date;
+  @Prop({default: EChannelScanStatus.SCHEDULED})
+  status: EChannelScanStatus;
   @Prop([{ type: mongoose.Schema.Types.ObjectId, ref: 'Chat' }])
   chats: Chat[];
 }
