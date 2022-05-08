@@ -19,6 +19,7 @@
             :key="item.title"
             :to="item.link"
             link
+            v-show="canShow(item)"
           >
             <v-list-item-icon>
               <v-icon>{{ item.icon }}</v-icon>
@@ -46,7 +47,7 @@
           width="40"
         />
       </div>
-      <v-toolbar-title>Телеграм Дрочер</v-toolbar-title>
+      <v-toolbar-title>Телеграм Оркєр</v-toolbar-title>
       <v-spacer></v-spacer>
     </v-app-bar>
     <v-main>
@@ -56,6 +57,7 @@
 </template>
 
 <script>
+import { mapActions, mapGetters } from 'vuex';
 
 export default {
   name: 'App',
@@ -64,15 +66,29 @@ export default {
     return {
       selectedItem: 1,
       items: [
-        { title: 'Про цю штуку', icon: 'mdi-home-variant', link: '/' },
-        { title: 'Канали', icon: 'mdi-television-classic', link: 'channels' },
-        { title: 'Користувачі', icon: 'mdi-emoticon-poop', link: 'users' },
-        { title: 'Мапа', icon: 'mdi-map', link: 'map' },
+        {
+          title: 'Про цю штуку', icon: 'mdi-home-variant', link: '/', protected: false,
+        },
+        {
+          title: 'Канали', icon: 'mdi-television-classic', link: 'channels', protected: false,
+        },
+        {
+          title: 'Користувачі', icon: 'mdi-emoticon-poop', link: 'users', protected: false,
+        },
+        {
+          title: 'Додати локації', icon: 'mdi-google-maps', link: 'map', protected: true,
+        },
+        {
+          title: 'Додати канали', icon: 'mdi-television-guide', link: 'addChannels', protected: true,
+        },
       ],
       right: null,
     };
   },
   computed: {
+    ...mapGetters([
+      'isLogged',
+    ]),
     mini() {
       switch (this.$vuetify.breakpoint.name) {
         case 'xs':
@@ -89,6 +105,19 @@ export default {
           return false;
       }
     },
+  },
+  methods: {
+    ...mapActions([
+      'setAuthFromCookies',
+    ]),
+    canShow(item) {
+      if (!item.protected) return true;
+      if (this.isLogged) return true;
+      return false;
+    },
+  },
+  mounted() {
+    this.setAuthFromCookies();
   },
 };
 </script>

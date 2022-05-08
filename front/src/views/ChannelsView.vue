@@ -118,11 +118,13 @@ export default {
     return {
       name: null,
       search: '',
+      loading: false,
     };
   },
   methods: {
     ...mapActions([
       'getAllChannels',
+      'sendChannelsForScan',
     ]),
     openChannelInfo(id) {
       this.$router.push({ name: 'channel', params: { id } });

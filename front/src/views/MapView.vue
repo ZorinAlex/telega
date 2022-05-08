@@ -1,5 +1,5 @@
 <template>
-  <div style="height: 100%">
+  <div style="height: 100%" class="map-container">
     <l-map :zoom="zoom" :center="center" @click="addMarker">
       <l-tile-layer :url="url"></l-tile-layer>
       <l-marker v-for="(marker, index) in markers" :key="index" :lat-lng="marker"></l-marker>
@@ -11,27 +11,43 @@
       >
       </l-circle>
       <l-rectangle
-        v-if="rectangle.bounds.length>1"
-        :bounds="rectangle.bounds"
-        :l-style="rectangle.style"
+        v-for="region in regions" :key="region._id"
+        :bounds="[{lat:region.minLat, lng: region.minLng}, {lat:region.maxLat, lng: region.maxLng}]"
+        :l-style="getRegionStyle(region.status)">
+      </l-rectangle>
+      <l-rectangle
+        v-if="getRectangle.bounds.length>1"
+        :bounds="getRectangle.bounds"
+        :l-style="getRectangle.style"
       />
     </l-map>
-    <v-btn
-      style="{
-        position: fixed; top: -185px;
-        right: -11px;
-        z-index: 100000000;}"
-      @click.prevent="addCircles"
-    >Show Region</v-btn>
-
-    <v-btn
-      style="{
-        position: fixed;
-        top: -138px;
-        right: 129px;
-        z-index: 100000000;}"
-      @click.prevent="addRegion"
-    >Add Region</v-btn>
+    <div class="map-panel">
+      <v-btn
+        text
+        class="mx-1"
+        @click.prevent="addCircles"
+      >Показати</v-btn>
+      <v-btn
+        text
+        class="mx-1"
+        @click.prevent="clearRegion"
+      >Очистити</v-btn>
+      <v-btn
+        text
+        class="mx-1"
+        @click.prevent="addRegionOnMap"
+      >Сканувати</v-btn>
+      <v-text-field
+        class="ma-2 mt-2"
+        label="Radius"
+        outlined
+        v-model="radius"
+        type="number"
+        suffix="m"
+        dense
+        hide-details
+      ></v-text-field>
+    </div>
   </div>
 
 </template>
@@ -42,6 +58,7 @@ import {
 } from 'vue2-leaflet';
 import { Icon } from 'leaflet';
 import * as _ from 'lodash';
+import { mapActions, mapGetters } from 'vuex';
 import { locationRequest } from '../service/request';
 
 export default {
@@ -55,9 +72,10 @@ export default {
   data() {
     return {
       url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-      zoom: 7,
+      zoom: 4,
       center: [50.25396978003467, 30.52426519066376],
       markers: [],
+      radius: 2000,
       circles: [],
       rectangle: {
         bounds: [],
@@ -67,12 +85,30 @@ export default {
     };
   },
   methods: {
+    ...mapActions([
+      'getRegions',
+      'addRegion',
+    ]),
     addMarker(event) {
       this.rectangle.bounds.push(event.latlng);
       this.markers.push(event.latlng);
-      console.log(event.latlng);
-      // this.findUsers(event.latlng);
-      // this.findUsers(event.latlng);
+    },
+    getRegionStyle(status) {
+      switch (status) {
+        case 'done':
+          return { color: 'green', weight: 1, fillColor: 'green' };
+        case 'active':
+          return { color: 'yellow', weight: 1, fillColor: 'yellow' };
+        case 'scheduled':
+          return { color: 'red', weight: 1, fillColor: 'red' };
+        default:
+          return { color: 'red', weight: 1, fillColor: 'red' };
+      }
+    },
+    clearRegion() {
+      this.rectangle.bounds = [];
+      this.markers = [];
+      this.circles = [];
     },
     addCircles() {
       let step = 1;
@@ -87,20 +123,19 @@ export default {
         }
       }
     },
-    async addRegion() {
+    async addRegionOnMap() {
       const minMax = this.getMinMax();
-      const region = await locationRequest.post('/region', {
+      await this.addRegion({
         minLat: minMax.minLat,
         minLng: minMax.minLng,
         maxLat: minMax.maxLat,
         maxLng: minMax.maxLng,
-        radius: 2000,
+        radius: Number(this.radius),
       });
-      console.log(region);
+      this.clearRegion();
     },
     calcScanCoords(step) {
       const startOffset = { x: 0, y: 0 };
-      const radius = 2000;
       const minMax = this.getMinMax();
       const heightLat = this.getDistance(
         { lat: minMax.minLat, lng: minMax.minLng },
@@ -110,16 +145,17 @@ export default {
         { lat: minMax.minLat, lng: minMax.minLng },
         { lat: minMax.minLat, lng: minMax.maxLng },
       );
-      const stepsByHeight = Math.ceil(heightLat / (radius * 2));
-      const stepsByWidth = Math.ceil(widthLng / (radius * 2));
+      const stepsByHeight = Math.ceil(heightLat / (Number(this.radius) * 2));
+      const stepsByWidth = Math.ceil(widthLng / (Number(this.radius) * 2));
       if (step > stepsByHeight * stepsByWidth) return null;
-      const coverHeight = stepsByHeight * radius * 2;
-      const coverWidth = stepsByWidth * radius * 2;
+      const coverHeight = stepsByHeight * Number(this.radius) * 2;
+      const coverWidth = stepsByWidth * Number(this.radius) * 2;
       startOffset.x = (coverWidth - widthLng) / 2;
       startOffset.y = (coverHeight - heightLat) / 2;
-      const finalDistanceXLon = Math.ceil(step / stepsByHeight) * (radius * 2)
-        - startOffset.x - radius;
-      const finalDistanceYLat = (step % stepsByHeight) * (radius * 2) - startOffset.y + radius;
+      const finalDistanceXLon = Math.ceil(step / stepsByHeight) * (Number(this.radius) * 2)
+        - startOffset.x - Number(this.radius);
+      const finalDistanceYLat = (step % stepsByHeight) * (Number(this.radius) * 2) - startOffset.y
+        + Number(this.radius);
       return {
         lat: this.getCoordsByDistanceAndDirection(
           { lat: minMax.minLat, lng: minMax.minLng },
@@ -154,7 +190,7 @@ export default {
       };
     },
     addCircle(coords) {
-      this.circles.push({ latlng: coords, radius: 2000, color: '#ff00ff' });
+      this.circles.push({ latlng: coords, radius: Number(this.radius), color: '#ff00ff' });
     },
     getCoordsByDistanceAndDirection(startLocation, distance, directionAngle) {
       const R = 6371e3;
@@ -176,6 +212,14 @@ export default {
       console.log(nearby.data);
     },
   },
+  computed: {
+    ...mapGetters([
+      'regions',
+    ]),
+    getRectangle() {
+      return this.rectangle;
+    },
+  },
   mounted() {
     delete Icon.Default.prototype._getIconUrl;
     Icon.Default.mergeOptions({
@@ -186,19 +230,22 @@ export default {
       // eslint-disable-next-line global-require
       shadowUrl: require('leaflet/dist/images/marker-shadow.png'),
     });
-    // setInterval(async () => {
-    //   const time = new Date().toLocaleString();
-    //   console.log(time);
-    //   const coords = this.testPoints[this.currentTestCount];
-    //   const nearby = await locationRequest.post('/users', {
-    //     lat: coords.lat,
-    //     lan: coords.lng,
-    //   });
-    //   console.log(_.isEqual(nearby.data, this.lastData));
-    //   this.lastData = nearby.data;
-    //   this.currentTestCount += 1;
-    //   if (this.currentTestCount > this.testPoints.length - 1) this.currentTestCount = 0;
-    // }, 1000 * 60);
+    this.getRegions();
   },
 };
 </script>
+
+<style>
+  .map-container{
+    position: relative;
+  }
+  .map-panel{
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 10000000;
+    background-color: white;
+    padding: 10px;
+    border-radius: 5px;
+  }
+</style>

@@ -34,6 +34,16 @@ const routes = [
     name: 'map',
     component: () => import('../views/MapView.vue'),
   },
+  {
+    path: '/addChannels',
+    name: 'addChannels',
+    component: () => import('../views/AddChannelsView.vue'),
+  },
+  {
+    path: '/login',
+    name: 'login',
+    component: () => import('../views/LoginView.vue'),
+  },
 ];
 
 const router = new VueRouter({
