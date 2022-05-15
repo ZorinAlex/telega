@@ -8,6 +8,9 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { AppLoggerMiddleware } from './core/app.logger.middleware';
 import { MongooseModule } from '@nestjs/mongoose';
 import { TelegramModule } from './telegram/telegram.module';
+import { UserPhotosModule } from './user-photos/user-photos.module';
+import { join } from 'path';
+import { ServeStaticModule } from '@nestjs/serve-static';
 
 @Module({
   imports: [
@@ -25,9 +28,13 @@ import { TelegramModule } from './telegram/telegram.module';
         }),
         inject: [ConfigService],
       }),
+      ServeStaticModule.forRoot({
+        rootPath: join(__dirname, '..', 'photos'),
+      }),
       AuthModule,
       ScheduleModule.forRoot(),
-      TelegramModule
+      TelegramModule,
+      UserPhotosModule
   ],
   providers: [
     {provide: APP_FILTER, useClass: ExceptionsFilter}

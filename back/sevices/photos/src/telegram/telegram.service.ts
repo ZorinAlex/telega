@@ -8,9 +8,9 @@ import { ConfigService } from '@nestjs/config';
 const input = require("input");
 import * as _ from 'lodash';
 import BigInteger = require('big-integer');
-import UserInfo = Api.help.UserInfo;
-import btoa from 'btoa'
-import InputPeerChannel = Api.InputPeerChannel;
+import * as btoa from 'btoa'
+import { join } from "path";
+import * as fs from "fs";
 
 @Injectable()
 export class TelegramService {
@@ -21,6 +21,7 @@ export class TelegramService {
   ){
     (async ()=>{
       await this.auth();
+      //await this.test();
     })()
   }
   protected serviceName: string = 'photos';
@@ -58,56 +59,6 @@ export class TelegramService {
     new this.sessionModel(DBSession).save();
   }
 
-  async getChannelData(channel: string){
-    try {
-      return await this.client.invoke(
-        new Api.channels.GetFullChannel({
-          channel: channel,
-        })
-      );
-    }catch (e) {
-      return e.message
-    }
-  }
-
-  async getUsersFromChat(chat: string){
-    try {
-      let users :Array<UserInfo> = [];
-      let offset: number = 0;
-      let result;
-      result = await this.getChatUsersParams(100, offset, chat);
-      users.push(...result.users);
-      offset+=100;
-      for(let i = 0; i<Math.floor((Number(result.count) - 100) / 100)+1;i++){
-        result = await this.getChatUsersParams(100, offset, chat);
-        users.push(...result.users);
-        offset+=100;
-      }
-      return users
-    }catch (e) {
-      return e.message
-    }
-  }
-
-  async getUsersFromChatByPeer(chatId: string, accessHash: string){
-    try {
-      let users :Array<UserInfo> = [];
-      let offset: number = 0;
-      let result;
-      result = await this.getChatUsersParamsByPeer(100, offset, chatId, accessHash);
-      users.push(...result.users);
-      offset+=100;
-      for(let i = 0; i<Math.floor((Number(result.count) - 100) / 100)+1;i++){
-        result = await this.getChatUsersParamsByPeer(100, offset, chatId, accessHash);
-        users.push(...result.users);
-        offset+=100;
-      }
-      return users
-    }catch (e) {
-      return e.message
-    }
-  }
-
   private  toBase64(arr) {
     arr = new Uint8Array(arr);
     return btoa(
@@ -115,11 +66,11 @@ export class TelegramService {
     );
   }
 
-  async getUserPhotos(user: string){
+  private async getUserPhotosById(userId: string){
     try {
       return await this.client.invoke(
         new Api.photos.GetUserPhotos({
-          userId: BigInteger(user),
+          userId: BigInteger(userId),
           offset: 0,
           // @ts-ignore
           maxId: 0,
@@ -131,103 +82,95 @@ export class TelegramService {
     }
   }
 
-  async getUserBase64Photo(userId: string){
-    const userPhotos = await this.getUserPhotos(userId);
+  private async getUserPhotosByUsername(username: string){
+    try {
+      return await this.client.invoke(
+        new Api.photos.GetUserPhotos({
+          userId: username,
+          offset: 0,
+          // @ts-ignore
+          maxId: 0,
+          limit: 100,
+        })
+      );
+    }catch (e) {
+      return null
+    }
+  }
+
+  async getUserPhotos(data: string, byUserId: boolean){
+    let userPhotos;
+    if(byUserId){
+      userPhotos = await this.getUserPhotosById(data);
+    }else{
+      userPhotos = await this.getUserPhotosByUsername(data);
+    }
     if(!_.isNil(userPhotos) && userPhotos.photos.length>0){
-      const photo = userPhotos.photos[0];
-      console.log(photo);
-      if(_.has(photo, 'fileReference')){
-        const buffer = await this.client.downloadFile(
-          new Api.InputPhotoFileLocation({
-            id: photo.id,
-            // @ts-ignore
-            accessHash: photo.accessHash,
-            // @ts-ignore
-            fileReference: photo.fileReference,
-            thumbSize: "a"
-          }),
-          {
-            // @ts-ignore
-            dcId: photo.dcId,
-            fileSize: 1024*1024,
-          });
-        return this.toBase64(buffer);
+      const photos = [];
+      for(let i=0; i< userPhotos.photos.length; i++){
+        const photo = userPhotos.photos[i];
+        if(_.has(photo, 'fileReference')){
+          const buffer = await this.client.downloadFile(
+            new Api.InputPhotoFileLocation({
+              id: photo.id,
+              // @ts-ignore
+              accessHash: photo.accessHash,
+              // @ts-ignore
+              fileReference: photo.fileReference,
+              thumbSize: "b"
+            }),
+            {
+              // @ts-ignore
+              dcId: photo.dcId,
+              fileSize: 1024*1024,
+            });
+            photos.push(buffer);
+        }
       }
+      return photos
     }
     return null
   }
 
+  async test(){
+    const photos = await this.getUserPhotos('Solopvova', false);
+    for(let i=0; i< photos.length; i++){
+      const savePath = join(__dirname, '../../', 'photos/', '123456', '/', i+'.jpg');
+      const userfolder = join(__dirname, '../../', 'photos/', '123456');
+      if (!fs.existsSync(userfolder)){
+        await fs.mkdirSync(userfolder);
+        console.log('Folder Created Successfully.');
+      }
+      await fs.writeFileSync(savePath, photos[i]);
+    }
 
-  private async getChatUsersParams(limit: number, offset:number, chat: string){
-    return  await this.client.invoke(
-      new Api.channels.GetParticipants({
-        channel: chat,
-        // @ts-ignore
-        filter: new Api.ChannelParticipantsRecent({}),
-        offset: offset,
-        limit: limit,
-        // @ts-ignore
-        hash: 0,
-      })
-    );
   }
 
-  private async getChatUsersParamsByPeer(limit: number, offset:number, chatId: string, accessHash: string){
-    return  await this.client.invoke(
-      new Api.channels.GetParticipants({
-        channel: new InputPeerChannel({channelId: BigInteger(chatId), accessHash: BigInteger(accessHash)}),
-        // @ts-ignore
-        filter: new Api.ChannelParticipantsRecent({}),
-        offset: offset,
-        limit: limit,
-        // @ts-ignore
-        hash: 0,
-      })
-    );
-  }
+  //USR PHOTO
+  // const result = await client.invoke(
+  //     new Api.photos.GetUserPhotos({
+  //         userId: "Solopvova",
+  //         offset: 0,
+  //         maxId: 0,
+  //         limit: 100,
+  //     })
+  // );
+  // console.log(result.photos[1]);
+  //
+  // const photo = result.photos[1];
+  // const buffer = await client.downloadFile(
+  //     new Api.InputPhotoFileLocation({
+  //         id: photo.id,
+  //         accessHash: photo.accessHash,
+  //         fileReference: photo.fileReference,
+  //         thumbSize: "a"
+  //     }),
+  //     {
+  //         dcId: photo.dcId,
+  //         fileSize: 1024*1024,
+  //     });
+  // console.log(toBase64(buffer));
+  // console.log("Downloaded image is", buffer);
+  //     fs.writeFileSync("picture.jpg", buffer);
 
-  async getChatMessages(chat: string, limit:number, offset:number){
-    return await this.client.invoke(
-      new Api.messages.GetHistory({
-        peer: chat,
-        offsetId: 0,
-        offsetDate: 0,
-        addOffset: offset,
-        limit: limit,
-        maxId: 0,
-        minId: 0,
-        // @ts-ignore
-        hash: 0,
-      })
-    );
-  }
-
-  async getChatMessagesByPeer(chatId: string, accessHash: string, limit:number, offset:number){
-    return await this.client.invoke(
-      new Api.messages.GetHistory({
-        peer: new InputPeerChannel({channelId: BigInteger(chatId), accessHash: BigInteger(accessHash)}),
-        offsetId: 0,
-        offsetDate: 0,
-        addOffset: offset,
-        limit: limit,
-        maxId: 0,
-        minId: 0,
-        // @ts-ignore
-        hash: 0,
-      })
-    );
-  }
-
-  async getUsersNearby(coordinates: Array<number>){
-    const result = await this.client.invoke(
-        new Api.contacts.GetLocated({
-            geoPoint: new Api.InputGeoPoint({
-                lat: 49.881885305228366,
-                long: 28.56640119324312,
-                accuracyRadius: 50,
-            }),
-            selfExpires: 43,
-        })
-    );
-  }
 }

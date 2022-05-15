@@ -26,6 +26,8 @@ export class User {
   @Prop()
   location: [number];
   @Prop({default: false})
+  isPhotosScanned: boolean;
+  @Prop({default: false})
   approvedVorog: boolean;
   @Prop([{ type: mongoose.Schema.Types.ObjectId, ref: 'Photo' }])
   photos: Photo[];

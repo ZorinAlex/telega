@@ -1,0 +1,18 @@
+version: "3.9"
+services:
+  front:
+    image: "zorinalex/telega_front"
+    ports:
+      - "80:80"
+  channels:
+    image: "zorinalex/telega"
+    ports:
+      - "4000:4000"
+  data:
+    image: "zorinalex/telega_data"
+    ports:
+      - "5000:5000"
+  location:
+    image: "zorinalex/telega_loc"
+    ports:
+      - "3000:3000"
