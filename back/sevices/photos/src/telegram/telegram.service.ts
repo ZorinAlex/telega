@@ -21,7 +21,6 @@ export class TelegramService {
   ){
     (async ()=>{
       await this.auth();
-      //await this.test();
     })()
   }
   protected serviceName: string = 'photos';
@@ -131,46 +130,4 @@ export class TelegramService {
     }
     return null
   }
-
-  async test(){
-    const photos = await this.getUserPhotos('Solopvova', false);
-    for(let i=0; i< photos.length; i++){
-      const savePath = join(__dirname, '../../', 'photos/', '123456', '/', i+'.jpg');
-      const userfolder = join(__dirname, '../../', 'photos/', '123456');
-      if (!fs.existsSync(userfolder)){
-        await fs.mkdirSync(userfolder);
-        console.log('Folder Created Successfully.');
-      }
-      await fs.writeFileSync(savePath, photos[i]);
-    }
-
-  }
-
-  //USR PHOTO
-  // const result = await client.invoke(
-  //     new Api.photos.GetUserPhotos({
-  //         userId: "Solopvova",
-  //         offset: 0,
-  //         maxId: 0,
-  //         limit: 100,
-  //     })
-  // );
-  // console.log(result.photos[1]);
-  //
-  // const photo = result.photos[1];
-  // const buffer = await client.downloadFile(
-  //     new Api.InputPhotoFileLocation({
-  //         id: photo.id,
-  //         accessHash: photo.accessHash,
-  //         fileReference: photo.fileReference,
-  //         thumbSize: "a"
-  //     }),
-  //     {
-  //         dcId: photo.dcId,
-  //         fileSize: 1024*1024,
-  //     });
-  // console.log(toBase64(buffer));
-  // console.log("Downloaded image is", buffer);
-  //     fs.writeFileSync("picture.jpg", buffer);
-
 }

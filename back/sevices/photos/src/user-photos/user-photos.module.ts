@@ -4,6 +4,7 @@ import { TelegramModule } from '../telegram/telegram.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Photo, PhotoSchema } from 'src/schemas/photo.schema';
 import { User, UserSchema } from '../schemas/user.schema';
+import { UserPhotosController } from './user-photos.controller';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { User, UserSchema } from '../schemas/user.schema';
       { name: Photo.name, schema: PhotoSchema },
     ])
   ],
-  providers: [UserPhotosService]
+  providers: [UserPhotosService],
+  controllers: [UserPhotosController]
 })
 export class UserPhotosModule {}

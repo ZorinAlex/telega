@@ -8,8 +8,7 @@ RUN npm install
 
 COPY dist ./dist/
 COPY .production.env ./
-VOLUME:
-      - ${PWD}/app/photos
+VOLUME /app/photos
 
 EXPOSE 2000
 ENV NODE_ENV=production

@@ -16,3 +16,7 @@ services:
     image: "zorinalex/telega_loc"
     ports:
       - "3000:3000"
+  photos:
+    image: "zorinalex/telega_photos"
+    ports:
+      - "2000:2000"
