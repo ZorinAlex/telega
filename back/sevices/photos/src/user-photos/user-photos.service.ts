@@ -7,6 +7,7 @@ import { join } from 'path';
 import * as fs from 'fs';
 import { Photo, PhotoDocument } from '../schemas/photo.schema';
 import { User, UserDocument } from '../schemas/user.schema';
+import { Cron, CronExpression } from '@nestjs/schedule';
 const ConsoleProgressBar = require('console-progress-bar');
 
 @Injectable()
@@ -21,30 +22,36 @@ export class UserPhotosService {
   ) {
     (async () => {
       await this.preload();
-      setTimeout(() => {
-        this.scan();
-      }, 5000);
     })();
   }
 
   private totalUsersForScan: number;
 
+  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   private async preload() {
+    this.logger.log('Scan started')
     this.totalUsersForScan = await this.userModel.count({ isPhotosScanned: false }).exec();
     this.consoleProgressBar = new ConsoleProgressBar({ maxValue: this.totalUsersForScan });
+    setTimeout(() => {
+      this.scan();
+    }, 10000);
+  }
+
+  private async getUsersPack(): Promise<Array<UserDocument>>{
+    return await this.userModel.find({isPhotosScanned: false}).limit(100).exec()
   }
 
   private async scan() {
-    const user: UserDocument = await this.userModel.findOne({ isPhotosScanned: false }).exec();
-    if (!_.isNil(user)) {
-      await this.scanUserPhotos(user);
-      this.scan();
+    const users: Array<UserDocument> = await this.getUsersPack();
+    if(!_.isNil(users) && users.length > 0){
+      await this.scanUsersPhotos(users);
+      this.scan()
     }
   }
 
   private async cleanUsers(){
     const users: Array<UserDocument> = await this.userModel.find({ isPhotosScanned: true }).limit(500).exec();
-    if (!_.isNil(users)) {
+    if (!_.isNil(users) && users.length > 0) {
       for(let i = 0; i< users.length; i++){
         const user = users[i];
         user.isPhotosScanned = false;
@@ -57,34 +64,34 @@ export class UserPhotosService {
     }
   }
 
-  private async scanUserPhotos(user: UserDocument) {
-    this.logger.log(user.id);
-    let photos = [];
-    let photosDB = [];
-    if (!_.isNil(user.username)) {
-      photos = await this.telegramService.getUserPhotos(user.username, false);
-    } else {
-      photos = await this.telegramService.getUserPhotos(user.id, true);
-    }
-    if (!_.isNil(photos)) {
-      for (let photoIndex = 0; photoIndex < photos.length; photoIndex++) {
-        const savePath = join(__dirname, '../../', 'photos/', user._id.toString(), '/', photoIndex + '.jpg');
-        const userfolder = join(__dirname, '../../', 'photos/', user._id.toString());
-        if (!fs.existsSync(userfolder)) {
-          await fs.mkdirSync(userfolder);
-        }
-        const newPhoto = await new this.photoModel({
-          userMongoId: user._id,
-          path: savePath,
-        }).save();
-        photosDB.push(newPhoto);
-        await fs.writeFileSync(savePath, photos[photoIndex]);
+  private async scanUsersPhotos(users: Array<UserDocument>){
+    for(let index = 0; index< users.length; index++){
+      const user: UserDocument = users[index];
+      let photos = [];
+      if(!_.isNil(user.username)){
+        photos = await this.telegramService.getUserPhotos(user.username, false);
+      }else{
+        photos = await this.telegramService.getUserPhotos(user.id, true);
       }
+      if(!_.isNil(photos)){
+        for(let photoIndex = 0; photoIndex < photos.length; photoIndex++){
+          const savePath = join(__dirname, '../../', 'photos/', user._id.toString(), '/', photoIndex+'.jpg');
+          const userfolder = join(__dirname, '../../', 'photos/', user._id.toString());
+          if (!fs.existsSync(userfolder)){
+            await fs.mkdirSync(userfolder);
+            this.logger.log('Folder Created for:', user._id.toString());
+          }
+          await new this.photoModel({
+            userMongoId: user._id,
+            path: savePath,
+          }).save();
+          await fs.writeFileSync(savePath, photos[photoIndex]);
+        }
+      }
+      user.isPhotosScanned = true;
+      await user.save();
+      this.consoleProgressBar.addValue(1);
     }
-    user.isPhotosScanned = true;
-    user.photos = photosDB;
-    await user.save();
-    this.consoleProgressBar.addValue(1);
   }
 
 }
