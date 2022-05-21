@@ -9,8 +9,7 @@ const input = require("input");
 import * as _ from 'lodash';
 import BigInteger = require('big-integer');
 import * as btoa from 'btoa'
-import { join } from "path";
-import * as fs from "fs";
+import { sleep } from 'telegram/Helpers';
 
 @Injectable()
 export class TelegramService {
@@ -66,7 +65,6 @@ export class TelegramService {
   }
 
   private async getUserPhotosById(userId: string){
-    try {
       return await this.client.invoke(
         new Api.photos.GetUserPhotos({
           userId: BigInteger(userId),
@@ -76,13 +74,9 @@ export class TelegramService {
           limit: 100,
         })
       );
-    }catch (e) {
-      return null
-    }
   }
 
   private async getUserPhotosByUsername(username: string){
-    try {
       return await this.client.invoke(
         new Api.photos.GetUserPhotos({
           userId: username,
@@ -92,18 +86,28 @@ export class TelegramService {
           limit: 100,
         })
       );
-    }catch (e) {
-      return null
-    }
   }
 
   async getUserPhotos(data: string, byUserId: boolean){
     let userPhotos;
-    if(byUserId){
-      userPhotos = await this.getUserPhotosById(data);
-    }else{
-      userPhotos = await this.getUserPhotosByUsername(data);
+    try{
+      if(byUserId){
+        userPhotos = await this.getUserPhotosById(data);
+      }else{
+        userPhotos = await this.getUserPhotosByUsername(data);
+      }
+    }catch (error) {
+      if(error.code === 420){
+        console.log('flood sleep:', error.seconds, 'seconds');
+        await sleep(error.seconds * 1000);
+        if(byUserId){
+          userPhotos = await this.getUserPhotosById(data);
+        }else{
+          userPhotos = await this.getUserPhotosByUsername(data);
+        }
+      }
     }
+
     if(!_.isNil(userPhotos) && userPhotos.photos.length>0){
       const photos = [];
       for(let i=0; i< userPhotos.photos.length; i++){

@@ -14,6 +14,7 @@ const ConsoleProgressBar = require('console-progress-bar');
 export class UserPhotosService {
   private logger: Logger = new Logger('User Photo');
   private consoleProgressBar: typeof ConsoleProgressBar;
+  private isBusy: boolean = false;
 
   constructor(
     @InjectModel(Photo.name) private photoModel: Model<PhotoDocument>,
@@ -29,12 +30,14 @@ export class UserPhotosService {
 
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   private async preload() {
-    this.logger.log('Scan started')
-    this.totalUsersForScan = await this.userModel.count({ isPhotosScanned: false }).exec();
-    this.consoleProgressBar = new ConsoleProgressBar({ maxValue: this.totalUsersForScan });
-    setTimeout(() => {
-      this.scan();
-    }, 10000);
+    if(!this.isBusy){
+      this.logger.log('Scan started');
+      this.totalUsersForScan = await this.userModel.count({ isPhotosScanned: false }).exec();
+      this.consoleProgressBar = new ConsoleProgressBar({ maxValue: this.totalUsersForScan });
+      setTimeout(() => {
+        this.scan();
+      }, 10000);
+    }
   }
 
   private async getUsersPack(): Promise<Array<UserDocument>>{
@@ -42,26 +45,18 @@ export class UserPhotosService {
   }
 
   private async scan() {
+    this.isBusy = true;
     const users: Array<UserDocument> = await this.getUsersPack();
     if(!_.isNil(users) && users.length > 0){
       await this.scanUsersPhotos(users);
       this.scan()
+    }else {
+      this.isBusy = false;
     }
   }
 
   private async cleanUsers(){
-    const users: Array<UserDocument> = await this.userModel.find({ isPhotosScanned: true }).limit(500).exec();
-    if (!_.isNil(users) && users.length > 0) {
-      for(let i = 0; i< users.length; i++){
-        const user = users[i];
-        user.isPhotosScanned = false;
-        user.photos = [];
-        await user.save();
-      }
-      this.cleanUsers();
-    }else {
-      this.logger.log('users cleaned')
-    }
+    await this.userModel.updateMany({isPhotosScanned: true}, {isPhotosScanned: false})
   }
 
   private async scanUsersPhotos(users: Array<UserDocument>){
