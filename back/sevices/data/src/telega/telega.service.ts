@@ -63,6 +63,62 @@ export class TelegaService {
       }else{
         return await req.exec()
       }
+    }else{
+      const findObject = {};
+      _.forIn(findUserDto, (value, key)=>{
+        switch (key) {
+          case 'firstName':
+            if(!_.isNil(findUserDto.firstName)){
+              const reg = new RegExp(findUserDto.firstName);
+              findObject['firstName'] = {
+                $regex: reg, $options: 'i'
+              }
+            }
+            break;
+          case 'lastName':
+            if(!_.isNil(findUserDto.lastName)){
+              const reg = new RegExp(findUserDto.lastName);
+              findObject['lastName'] = {
+                $regex: reg, $options: 'i'
+              }
+            }
+            break;
+          case 'username':
+            if(!_.isNil(findUserDto.username)){
+              const reg = new RegExp(findUserDto.username);
+              findObject['username'] = {
+                $regex: reg, $options: 'i'
+              }
+            }
+            break;
+          case 'phone':
+            if(!_.isNil(findUserDto.phone)){
+              const reg = new RegExp(findUserDto.phone);
+              findObject['phone'] = {
+                $regex: reg, $options: 'i'
+              }
+            }
+            break;
+          case 'withPhoneOnly':
+            if(!_.isNil(findUserDto.withPhoneOnly)){
+              findObject['phone'] = {
+                $ne: null
+              }
+            }
+            break;
+        }
+      });
+      const skip: number = _.isNil(findUserDto.skip)?0:findUserDto.skip;
+      const limit: number = _.isNil(findUserDto.limit)?25:findUserDto.limit;
+      const count = await this.userModel.count(findObject).exec();
+      const result = await this.userModel.find(findObject)
+        .skip(skip)
+        .limit(limit)
+        .exec();
+      return {
+        count,
+        result
+      }
     }
   }
 }
