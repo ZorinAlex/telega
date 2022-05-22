@@ -26,3 +26,8 @@ export const channelsRequest = axios.create({
   baseURL: `http://${getAddress()}:4000/data`,
   headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' },
 });
+
+export const photoRequest = axios.create({
+  baseURL: `http://${getAddress()}:2000`,
+  headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' },
+});
