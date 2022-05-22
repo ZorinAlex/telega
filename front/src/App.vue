@@ -47,7 +47,7 @@
           width="40"
         />
       </div>
-      <v-toolbar-title>Телеграм Оркєр</v-toolbar-title>
+      <v-toolbar-title>TFind</v-toolbar-title>
       <v-spacer></v-spacer>
     </v-app-bar>
     <v-main>
@@ -70,16 +70,16 @@ export default {
           title: 'Про цю штуку', icon: 'mdi-home-variant', link: '/', protected: false,
         },
         {
-          title: 'Канали', icon: 'mdi-television-classic', link: 'channels', protected: false,
+          title: 'Канали', icon: 'mdi-television-classic', link: '/channels', protected: false,
         },
         {
-          title: 'Користувачі', icon: 'mdi-emoticon-poop', link: 'users', protected: false,
+          title: 'Користувачі', icon: 'mdi-emoticon-poop', link: '/users', protected: false,
         },
         {
-          title: 'Додати локації', icon: 'mdi-google-maps', link: 'map', protected: true,
+          title: 'Додати локації', icon: 'mdi-google-maps', link: '/map', protected: true,
         },
         {
-          title: 'Додати канали', icon: 'mdi-television-guide', link: 'addChannels', protected: true,
+          title: 'Додати канали', icon: 'mdi-television-guide', link: '/addChannels', protected: true,
         },
       ],
       right: null,

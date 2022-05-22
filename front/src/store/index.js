@@ -13,6 +13,7 @@ export default new Vuex.Store({
     channel: null,
     user: null,
     auth: null,
+    usersFindCount: 0,
   },
   getters: {
     channels(state) {
@@ -23,6 +24,12 @@ export default new Vuex.Store({
     },
     user(state) {
       return state.user;
+    },
+    users(state) {
+      return state.users;
+    },
+    usersFindCount(state) {
+      return state.usersFindCount;
     },
     regions(state) {
       return state.regions;
@@ -40,6 +47,12 @@ export default new Vuex.Store({
     },
     addUser(state, user) {
       state.user = user;
+    },
+    addUsers(state, users) {
+      state.users = users;
+    },
+    findCount(state, count) {
+      state.usersFindCount = count;
     },
     addRegions(state, regions) {
       state.regions = regions;
@@ -65,6 +78,11 @@ export default new Vuex.Store({
     async findUser({ commit }, data) {
       const channel = await request.post('/user', data);
       commit('addUser', channel.data);
+    },
+    async findUsers({ commit }, data) {
+      const users = await request.post('/user', data);
+      commit('addUsers', users.data.result);
+      commit('findCount', users.data.count);
     },
     async getRegions({ commit }) {
       const regions = await locationRequest.get('/regions');

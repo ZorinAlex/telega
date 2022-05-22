@@ -100,7 +100,7 @@ export class TelegaService {
             }
             break;
           case 'withPhoneOnly':
-            if(!_.isNil(findUserDto.withPhoneOnly)){
+            if(!_.isNil(findUserDto.withPhoneOnly) && findUserDto.withPhoneOnly){
               findObject['phone'] = {
                 $ne: null
               }
@@ -109,11 +109,20 @@ export class TelegaService {
         }
       });
       const skip: number = _.isNil(findUserDto.skip)?0:findUserDto.skip;
-      const limit: number = _.isNil(findUserDto.limit)?25:findUserDto.limit;
+      const limit: number = _.isNil(findUserDto.limit)?21:findUserDto.limit;
       const count = await this.userModel.count(findObject).exec();
       const result = await this.userModel.find(findObject)
         .skip(skip)
         .limit(limit)
+        .populate({
+          path: 'userChatMessages',
+          populate:[{
+            path: 'chatMongoId',
+          },
+            {
+              path: 'messages'
+            }],
+        })
         .exec();
       return {
         count,
