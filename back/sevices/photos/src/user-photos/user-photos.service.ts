@@ -89,4 +89,12 @@ export class UserPhotosService {
     }
   }
 
+  async status(){
+    return {
+      busy: this.isBusy,
+      toScan: await this.userModel.count({ isPhotosScanned: false }).exec(),
+      scanned: await this.userModel.count({ isPhotosScanned: true }).exec()
+    }
+  }
+
 }

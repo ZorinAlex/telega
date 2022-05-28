@@ -297,4 +297,8 @@ export class DataService {
       if (!this.useUsersCache) await userChatMessages.save();
     }
   }
+
+  async status(){
+    return  await this.channelModel.findOne({status: EChannelScanStatus.ACTIVE}).exec();
+  }
 }
